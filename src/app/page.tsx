@@ -1,69 +1,71 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Suspense } from "react";
+import { listTasks } from "@/tasks/operations";
 
-export default function Home() {
+const statusLabels = { TODO: "To do", IN_PROGRESS: "In progress", DONE: "Done" };
+const priorityLabels = { LOW: "Low", MEDIUM: "Medium", HIGH: "High" };
+
+async function TaskList() {
+  let tasks;
+  try {
+    tasks = await listTasks();
+  } catch {
+    return (
+      <div className="card" role="alert">
+        <h2 className="text-lg font-semibold">We couldn&apos;t load your tasks.</h2>
+        <p className="my-3 text-slate-600">Please try again in a moment.</p>
+        <form action="/"><button type="submit" className="button-secondary">Retry</button></form>
+      </div>
+    );
+  }
+  if (!tasks.length) {
+    return (
+      <div className="card py-14 text-center">
+        <h2 className="text-xl font-semibold">No tasks yet</h2>
+        <p className="mt-2 text-slate-600">Start with one thing you&apos;d like to get done.</p>
+        <Link href="/tasks/new" className="button-secondary mt-5">Create your first task</Link>
+      </div>
+    );
+  }
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <ul aria-label="Tasks" className="space-y-4">
+      {tasks.map((task) => (
+        <li key={task.id} className="card min-w-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <h2 className="min-w-0 text-lg font-semibold [overflow-wrap:anywhere]">{task.title}</h2>
+            <div className="flex shrink-0 flex-wrap gap-2 text-xs font-medium">
+              <span className="rounded-md bg-indigo-50 px-2.5 py-1 text-indigo-800">{statusLabels[task.status]}</span>
+              <span className="rounded-md bg-slate-100 px-2.5 py-1 text-slate-700">Priority: {priorityLabels[task.priority]}</span>
+            </div>
+          </div>
+          {task.description && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-600 [overflow-wrap:anywhere]">{task.description}</p>}
+          <p className="mt-4 text-xs text-slate-500">
+            Created <time dateTime={task.createdAt.toISOString()}>{task.createdAt.toISOString().slice(0, 10)}</time>
           </p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+async function SuccessMessage({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
+  const params = await searchParams;
+  return params.created === "1" ? <p role="status" className="mb-6 rounded-xl bg-emerald-50 p-4 text-emerald-900">Task created successfully.</p> : null;
+}
+
+export default function Home({ searchParams }: PageProps<"/">) {
+  return (
+    <main className="page-shell max-w-4xl">
+      <header className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="eyebrow">TaskFlow</p>
+          <h1>Your tasks</h1>
+          <p className="mt-2 text-slate-600">A little clarity for what comes next.</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        <Link href="/tasks/new" className="button-primary">Add task</Link>
+      </header>
+      <Suspense fallback={null}><SuccessMessage searchParams={searchParams} /></Suspense>
+      <Suspense fallback={<p role="status" className="card">Loading tasks...</p>}><TaskList /></Suspense>
+    </main>
   );
 }

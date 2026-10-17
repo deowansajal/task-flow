@@ -1,6 +1,6 @@
 # TaskFlow requirements
 
-This document captures the requirements and design approved by the user on 2026-10-17.
+This document captures the requirements and design approved by the user on 2026-10-17. The Create Task implementation request revised the title and description limits to 120 and 1,000 characters.
 
 ## Project constraints
 
@@ -18,8 +18,8 @@ This document captures the requirements and design approved by the user on 2026-
 
 ## Text validation
 
-- Trim titles before validation; require 1–200 characters after trimming.
-- Descriptions are optional plain text, limited to 5,000 characters. Treat whitespace-only descriptions as empty.
+- Trim titles before validation; require 1 to 120 characters after trimming.
+- Descriptions are optional plain text, limited to 1,000 characters. Treat whitespace-only descriptions as empty.
 
 ## Deletion
 
@@ -112,5 +112,3 @@ This document captures the requirements and design approved by the user on 2026-
 - No blocking requirements or design questions remain.
 - The user approved these requirements and design as the basis for implementation on 2026-10-17. Implementation was not performed during the design session.
 - Routine implementation details will follow these requirements and the installed Next.js documentation.
-
-

@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TaskFlow
 
-## Getting Started
+A personal task list built with Next.js App Router, TypeScript, PostgreSQL,
+Prisma, Zod, Vitest, and Tailwind CSS. This slice creates tasks and displays
+saved tasks. It runs locally or behind restricted access, without accounts.
 
-First, run the development server:
+## Local setup
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Use Node.js 24 and Docker Desktop with Docker Compose.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. Run `npm ci`.
+2. Copy `.env.example` to `.env`. Choose a local PostgreSQL password and put
+   the same password in `POSTGRES_PASSWORD` and both connection URLs.
+   URL-encode special characters in connection URLs. Keep `.env` out of Git.
+3. Run `docker compose up -d --wait`.
+4. Run `npm run db:generate` and `npm run db:migrate`.
+5. Run `npm run dev` and open <http://localhost:3000>.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Development PostgreSQL uses localhost:5432 and the `taskflow` database.
+Test PostgreSQL uses localhost:5433 and the `taskflow_test` database.
+The development container has a named persistent volume. `docker compose stop`
+stops both containers while keeping data. Do not remove the development volume
+unless you intend to discard its tasks.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Checks
 
-## Learn More
+- `npm test`: fast validation and task-operation tests.
+- `npm run test:integration`: apply committed migrations to the separate test
+  database and run real PostgreSQL integration tests. Requires Docker containers
+  from the setup steps. The runner requires a test database name ending in
+  `_test` and refuses the development database name. It never resets a database.
+- `npm run lint`
+- `npm run typecheck`
+- `npm run build`: generates Prisma Client before the Next.js production build.
 
-To learn more about Next.js, take a look at the following resources:
+For schema changes, run `npx prisma migrate dev --name <change>` against the
+local development database, review the generated SQL, and include the migration
+in your change. Do not run migration reset against a database containing tasks.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Architecture and behavior
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+See [requirements](docs/taskflow-requirements.md), [glossary](GLOSSARY.md), and
+[ADRs](docs/adr/). Task operations stay inside the Next.js application;
+Server Actions validate writes and Prisma accesses PostgreSQL directly.
 
-## Deploy on Vercel
+Titles are trimmed and must contain 1 to 120 characters. Descriptions are
+optional plain text with at most 1,000 characters; whitespace-only descriptions
+are stored as empty. New tasks default to TODO and MEDIUM. Save waits for the
+database; failures preserve the form values. Cancel returns to the task list.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Editing, deleting, filtering, authentication, and deployment are outside this
+slice. Browser behavior is checked manually; see the feature checklist in
+`docs/testing/create-task.md`.
