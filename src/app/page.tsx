@@ -42,6 +42,7 @@ async function TaskList() {
           <p className="mt-4 text-xs text-slate-500">
             Created <time dateTime={task.createdAt.toISOString()}>{task.createdAt.toISOString().slice(0, 10)}</time>
           </p>
+          <Link href={`/tasks/${task.id}/edit`} className="button-secondary mt-3" aria-label={`Edit task: ${task.title}`}>Edit task</Link>
         </li>
       ))}
     </ul>
@@ -50,7 +51,9 @@ async function TaskList() {
 
 async function SuccessMessage({ searchParams }: Pick<PageProps<"/">, "searchParams">) {
   const params = await searchParams;
-  return params.created === "1" ? <p role="status" className="mb-6 rounded-xl bg-emerald-50 p-4 text-emerald-900">Task created successfully.</p> : null;
+  const message = params.updated === "1" ? "Task updated successfully."
+    : params.created === "1" ? "Task created successfully." : null;
+  return message ? <p role="status" className="mb-6 rounded-xl bg-emerald-50 p-4 text-emerald-900">{message}</p> : null;
 }
 
 export default function Home({ searchParams }: PageProps<"/">) {

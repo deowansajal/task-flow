@@ -1,7 +1,7 @@
 # TaskFlow
 
 A personal task list built with Next.js App Router, TypeScript, PostgreSQL,
-Prisma, Zod, Vitest, and Tailwind CSS. This slice creates tasks and displays
+Prisma, Zod, Vitest, and Tailwind CSS. This slice creates and edits tasks and displays
 saved tasks. It runs locally or behind restricted access, without accounts.
 
 ## Local setup
@@ -48,6 +48,20 @@ optional plain text with at most 1,000 characters; whitespace-only descriptions
 are stored as empty. New tasks default to TODO and MEDIUM. Save waits for the
 database; failures preserve the form values. Cancel returns to the task list.
 
-Editing, deleting, filtering, authentication, and deployment are outside this
-slice. Browser behavior is checked manually; see the feature checklist in
-`docs/testing/create-task.md`.
+Each task has an Edit task link to `/tasks/[id]/edit`. The edit page preloads
+its saved title, description, status, and priority. Any transition between valid
+statuses is allowed, including reopening Done tasks. Edit submissions require
+explicit status and priority; creation defaults never reset an existing task.
+Edits preserve the task's creation timestamp and update its modification time.
+The last successful save wins when multiple tabs edit the same task.
+
+Missing tasks show a task-specific not-found page. If a task is deleted while
+its edit form is open, Save shows "Task no longer exists" and preserves entries.
+Loading failures offer Retry; failed saves retain entries and show field errors
+or a retryable message. Successful updates return to `/` with a success message.
+Save and Cancel return to the current unfiltered, newest-first list; filter and
+sort controls and preserving their view state are deferred to a later phase.
+
+Deleting, filtering, authentication, and deployment are outside this slice.
+Browser behavior is checked manually; see `docs/testing/create-task.md` and
+`docs/testing/edit-task.md`.

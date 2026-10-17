@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { createTaskAction, type CreateTaskState } from "./actions";
+import type { TaskFields, TaskFormState } from "./actions";
 
-export function CreateTaskForm() {
-  const [state, action, pending] = useActionState<CreateTaskState, FormData>(createTaskAction, {});
-  const [values, setValues] = useState(state.values ?? {
-    title: "", description: "", status: "TODO", priority: "MEDIUM",
-  });
+export function TaskForm({ initialValues, saveAction }: {
+  initialValues: TaskFields;
+  saveAction: (previous: TaskFormState, formData: FormData) => Promise<TaskFormState>;
+}) {
+  const [state, action, pending] = useActionState<TaskFormState, FormData>(saveAction, {});
+  const [values, setValues] = useState(state.values ?? initialValues);
   const errorSummary = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {

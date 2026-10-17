@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createTaskSchema } from "./schema";
+import { createTaskSchema, updateTaskSchema } from "./schema";
 
 describe("task creation input", () => {
   it("trims a required title and supplies the default status and priority", () => {
@@ -53,4 +53,46 @@ it("allows choosing status and priority before saving", () => {
   expect(createTaskSchema.parse({ title: "Plan", status: "IN_PROGRESS", priority: "HIGH" })).toMatchObject({
     status: "IN_PROGRESS", priority: "HIGH",
   });
+});
+
+it("requires explicit status and priority when editing instead of applying creation defaults", () => {
+  const result = updateTaskSchema.safeParse({ title: "Plan" });
+  expect(result.success).toBe(false);
+  if (!result.success) {
+    expect(result.error.issues.map((issue) => issue.path)).toEqual([["status"], ["priority"]]);
+  }
+  expect(updateTaskSchema.parse({ title: "  Revised plan  ", status: "DONE", priority: "LOW" }))
+    .toEqual({ title: "Revised plan", description: null, status: "DONE", priority: "LOW" });
+});
+it.each([
+  { title: "" },
+  { title: " \n\t " },
+  { title: null },
+  { title: 42 },
+  { title: "a".repeat(121) },
+  { description: "d".repeat(1001) },
+  { description: 42 },
+  { status: undefined },
+  { status: null },
+  { status: "ARCHIVED" },
+  { priority: undefined },
+  { priority: null },
+  { priority: "URGENT" },
+])("rejects invalid edit fields: %j", (changes) => {
+  expect(updateTaskSchema.safeParse({ title: "Plan", status: "TODO", priority: "MEDIUM", ...changes }).success)
+    .toBe(false);
+});
+
+it("shares Create's text limits and normalization when editing", () => {
+  const input = {
+    title: " " + "a".repeat(120) + " ", description: "d".repeat(998) + "\r\nx",
+    status: "IN_PROGRESS", priority: "HIGH",
+  };
+  expect(updateTaskSchema.parse(input)).toEqual({
+    title: "a".repeat(120), description: "d".repeat(998) + "\nx",
+    status: "IN_PROGRESS", priority: "HIGH",
+  });
+  expect(updateTaskSchema.parse({ ...input, description: " \r\n\t " }).description).toBeNull();
+  expect(updateTaskSchema.parse({ ...input, description: "  <b>Keep plain text</b>\r\n " }).description)
+    .toBe("  <b>Keep plain text</b>\n ");
 });

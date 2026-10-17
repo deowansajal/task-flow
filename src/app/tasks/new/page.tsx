@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { CreateTaskForm } from "@/tasks/create-task-form";
+import { TaskForm } from "@/tasks/task-form";
+import { createTaskAction } from "@/tasks/actions";
 
 export default function NewTaskPage() {
   return (
@@ -10,7 +11,7 @@ export default function NewTaskPage() {
         <h1>Create task</h1>
         <p className="mt-2 text-slate-600">Give your next step a place to start.</p>
       </header>
-      <CreateTaskForm />
+      <TaskForm saveAction={createTaskAction} initialValues={{ title: "", description: "", status: "TODO", priority: "MEDIUM" }} />
     </main>
   );
 }
