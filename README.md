@@ -1,7 +1,7 @@
 # TaskFlow
 
 A personal task list built with Next.js App Router, TypeScript, PostgreSQL,
-Prisma, Zod, Vitest, and Tailwind CSS. This slice creates and edits tasks and displays
+Prisma, Zod, Vitest, and Tailwind CSS. This slice creates, edits, and deletes tasks and displays
 saved tasks. It runs locally or behind restricted access, without accounts.
 
 ## Local setup
@@ -62,6 +62,17 @@ or a retryable message. Successful updates return to `/` with a success message.
 Save and Cancel return to the current unfiltered, newest-first list; filter and
 sort controls and preserving their view state are deferred to a later phase.
 
-Deleting, filtering, authentication, and deployment are outside this slice.
-Browser behavior is checked manually; see `docs/testing/create-task.md` and
-`docs/testing/edit-task.md`.
+Delete task is available only on the list. A native dialog names the task and
+explains that deletion is permanent. Cancel has initial focus; Confirm, Cancel,
+and Escape dismissal are disabled while deleting, and progress is announced.
+Deletion waits for PostgreSQL confirmation, refreshes the list in place, and
+moves focus to a surviving task action or the list heading. There is no undo.
+An already-absent task completes the request with an informational message.
+Deletion uses the task ID even if another tab has edited it. Persistence errors
+keep the dialog open and allow retry. If a response is lost, refresh or retry to
+reconcile the uncertain outcome; a committed deletion is never rolled back by
+a subsequent refresh failure.
+
+Filtering, authentication, and deployment are outside this slice.
+Browser behavior is checked manually; see `docs/testing/create-task.md`,
+`docs/testing/edit-task.md`, and `docs/testing/delete-task.md`.

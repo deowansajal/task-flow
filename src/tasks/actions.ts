@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createTask, updateTask } from "./operations";
+import { createTask, deleteTask, updateTask } from "./operations";
 
 export type TaskFields = {
   title: string;
@@ -56,4 +56,20 @@ export async function updateTaskAction(
   revalidatePath("/");
   revalidatePath(`/tasks/${id}/edit`);
   redirect("/?updated=1");
+}
+
+export type DeleteTaskResult = Awaited<ReturnType<typeof deleteTask>> & { refreshFailed?: boolean };
+
+export async function deleteTaskAction(id: string): Promise<DeleteTaskResult> {
+  const result = await deleteTask(id);
+  if (!result.success) return result;
+
+  // A cache failure cannot undo a deletion that PostgreSQL already confirmed.
+  try {
+    revalidatePath(`/tasks/${encodeURIComponent(id)}/edit`);
+    revalidatePath("/");
+  } catch {
+    return { ...result, refreshFailed: true };
+  }
+  return result;
 }

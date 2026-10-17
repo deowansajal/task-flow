@@ -25,6 +25,14 @@ This document captures the requirements and design approved by the user on 2026-
 
 - Permanently delete a task only after a confirmation that names the task.
 - Trash and undo are outside the first version.
+- Delete controls appear only on the task list. Use one native, accessible confirmation dialog that names the selected task; initially focus Cancel.
+- Disable Confirm and Cancel and prevent Escape dismissal while deleting. Announce progress and prevent duplicate submissions.
+- Delete atomically by task ID even if another tab has modified the task since confirmation opened.
+- An already-absent task completes the request with an informational message, rather than claiming it was deleted by this request.
+- Refresh the list in place after confirmed deletion or an already-absent result. Keep announcements and focus handling available when deleting the final task.
+- On a persistence failure, keep the task visible and the dialog open with a recoverable error. A lost response has an uncertain outcome: offer refresh or an idempotent retry without claiming the task still exists in PostgreSQL.
+- A refresh failure after a confirmed deletion does not undo the deletion; offer a list refresh separately.
+- Cancel and Escape before submission restore focus to the Delete button. After completion, focus the next task's Delete button, a previous task's Delete button, or the task-list heading when empty.
 
 ## Filtering
 

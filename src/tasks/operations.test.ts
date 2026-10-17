@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { createTask, getTask, updateTask } from "./operations";
+import { createTask, deleteTask, getTask, updateTask } from "./operations";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -51,4 +52,28 @@ it("returns a retryable edit error without leaking database details", async () =
 it("does not misrepresent a task-loading failure as a missing task", async () => {
   vi.spyOn(prisma.task, "findUnique").mockRejectedValue(new Error("Database unavailable"));
   await expect(getTask("existing-task")).rejects.toThrow("Database unavailable");
+});
+
+it.each([undefined, null, "", " \n\t ", 42, {}, ["some-task"]])("rejects an invalid deletion ID before database access: %j", async (id) => {
+  const remove = vi.spyOn(prisma.task, "delete").mockRejectedValue(new Error("Unexpected database access"));
+  expect(await deleteTask(id)).toEqual({
+    success: false,
+    outcome: "invalid_id",
+    message: "We couldn't identify this task. Refresh the list and try again.",
+  });
+  expect(remove).not.toHaveBeenCalled();
+});
+it("returns a recoverable deletion error without leaking persistence details", async () => {
+  vi.spyOn(prisma.task, "delete").mockRejectedValue(new Error("password authentication failed for private-database"));
+  expect(await deleteTask("existing-task")).toEqual({
+    success: false,
+    outcome: "delete_failed",
+    message: "We couldn't delete your task. Please try again.",
+  });
+});
+it("treats an already-absent task as a completed deletion request", async () => {
+  vi.spyOn(prisma.task, "delete").mockRejectedValue(new Prisma.PrismaClientKnownRequestError(
+    "Private database details", { code: "P2025", clientVersion: "7.10.1" },
+  ));
+  expect(await deleteTask("missing-task")).toEqual({ success: true, outcome: "already_absent" });
 });

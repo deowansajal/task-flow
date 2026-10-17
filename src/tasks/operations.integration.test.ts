@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { createTask, getTask, listTasks, updateTask } from "./operations";
+import { createTask, deleteTask, getTask, listTasks, updateTask } from "./operations";
 
 const createdIds: string[] = [];
 
@@ -160,4 +160,59 @@ it("accepts unchanged saves and lets the last successful save win, including all
   // A stale form can overwrite newer changes, as required for this version.
   expect(await updateTask(result.task.id, originalInput)).toMatchObject({ success: true });
   expect(await getTask(result.task.id)).toMatchObject(originalInput);
+});
+
+it.each([
+  ["TODO", "LOW"], ["IN_PROGRESS", "MEDIUM"], ["DONE", "HIGH"],
+] as const)("permanently deletes only the selected %s/%s task, including after an edit", async (status, priority) => {
+  const selected = await createTask({ title: "Delete this task", status, priority });
+  if (!selected.success) throw new Error(selected.message);
+  createdIds.push(selected.task.id);
+  const other = await createTask({ title: "Keep this task", description: "Keep all details" });
+  if (!other.success) throw new Error(other.message);
+  createdIds.push(other.task.id);
+
+  expect(await updateTask(selected.task.id, { title: "Renamed in another tab", status, priority }))
+    .toMatchObject({ success: true });
+  expect(await deleteTask(selected.task.id)).toEqual({ success: true, outcome: "deleted" });
+  await prisma.$disconnect();
+  expect(await getTask(selected.task.id)).toBeNull();
+  expect((await listTasks()).some((task) => task.id === selected.task.id)).toBe(false);
+  expect(await getTask(other.task.id)).toEqual(other.task);
+  expect(await updateTask(selected.task.id, { title: "Stale edit", status, priority }))
+    .toMatchObject({ success: false, message: "Task no longer exists. Your entries are still here." });
+  expect(await getTask(selected.task.id)).toBeNull();
+});
+it("completes missing and repeated deletion requests without affecting another task", async () => {
+  const selected = await createTask({ title: "Delete once" });
+  if (!selected.success) throw new Error(selected.message);
+  createdIds.push(selected.task.id);
+  const other = await createTask({ title: "Keep during retries" });
+  if (!other.success) throw new Error(other.message);
+  createdIds.push(other.task.id);
+
+  expect(await deleteTask(`missing-${crypto.randomUUID()}`)).toEqual({ success: true, outcome: "already_absent" });
+  expect(await deleteTask(selected.task.id)).toEqual({ success: true, outcome: "deleted" });
+  expect(await deleteTask(selected.task.id)).toEqual({ success: true, outcome: "already_absent" });
+  expect(await getTask(other.task.id)).toEqual(other.task);
+});
+it("completes concurrent deletions with one deleted and one already-absent result", async () => {
+  const selected = await createTask({ title: "Concurrent deletion" });
+  if (!selected.success) throw new Error(selected.message);
+  createdIds.push(selected.task.id);
+  const results = await Promise.all([deleteTask(selected.task.id), deleteTask(selected.task.id)]);
+  expect(results).toEqual(expect.arrayContaining([
+    { success: true, outcome: "deleted" }, { success: true, outcome: "already_absent" },
+  ]));
+  expect(await getTask(selected.task.id)).toBeNull();
+});
+it("rejects invalid deletion input without changing persisted tasks", async () => {
+  const task = await createTask({ title: "Keep despite invalid deletion" });
+  if (!task.success) throw new Error(task.message);
+  createdIds.push(task.task.id);
+  const before = await listTasks();
+  for (const id of [undefined, null, "", " \n\t ", 42, { id: task.task.id }, [task.task.id]]) {
+    expect(await deleteTask(id)).toMatchObject({ success: false, outcome: "invalid_id" });
+  }
+  expect(await listTasks()).toEqual(before);
 });

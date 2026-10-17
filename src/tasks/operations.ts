@@ -29,6 +29,7 @@ export async function listTasks() {
 }
 
 const taskIdSchema = z.string().min(1);
+const deleteTaskIdSchema = taskIdSchema.refine((value) => value.trim().length > 0);
 const missingTaskMessage = "Task no longer exists. Your entries are still here.";
 
 export async function updateTask(id: unknown, input: unknown) {
@@ -65,4 +66,28 @@ export async function getTask(id: unknown) {
   const parsedId = taskIdSchema.safeParse(id);
   if (!parsedId.success) return null;
   return prisma.task.findUnique({ where: { id: parsedId.data } });
+}
+
+export async function deleteTask(id: unknown) {
+  const parsedId = deleteTaskIdSchema.safeParse(id);
+  if (!parsedId.success) {
+    return {
+      success: false as const,
+      outcome: "invalid_id" as const,
+      message: "We couldn't identify this task. Refresh the list and try again.",
+    };
+  }
+  try {
+    await prisma.task.delete({ where: { id: parsedId.data } });
+    return { success: true as const, outcome: "deleted" as const };
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return { success: true as const, outcome: "already_absent" as const };
+    }
+    return {
+      success: false as const,
+      outcome: "delete_failed" as const,
+      message: "We couldn't delete your task. Please try again.",
+    };
+  }
 }
